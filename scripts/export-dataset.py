@@ -55,7 +55,7 @@ def main():
     tmp = path + '.tmp'
     # utf-8-sig：Excel 直接双击打开不乱码
     with open(tmp, 'w', newline='', encoding='utf-8-sig') as f:
-        w = csv.DictWriter(f, fieldnames=[n for n, _ in COLS])
+        w = csv.DictWriter(f, fieldnames=[n for n, _ in COLS], lineterminator='\n')
         w.writeheader()
         w.writerows(rows)
     os.replace(tmp, path)

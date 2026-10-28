@@ -16,6 +16,10 @@ const p = mePaths(root);
 const now = new Date();
 const today = localDate(now);
 
+// 个人模式要本机私有数据；克隆下来的仓库没有，给一句能看懂的提示
+for (const [name, path] of [['画像', p.profile], ['岗位数据', p.r27], ['台账', p.ledger]]) {
+  if (!existsSync(path)) { console.error(`个人模式需要本机私有数据，缺少${name}：${path}\n只想看看的话用 npm run web（虚构演示数据）。`); process.exit(1); }
+}
 const profile = JSON.parse(readFileSync(p.profile, 'utf-8'));
 // 飞书导出：每页 data.fields 是列名，data.data 是按列排的行，data.record_id_list 是记录 ID
 const pages = readdirSync(p.r27).filter((f) => /^p\d+\.json$/.test(f)).sort().map((f) => JSON.parse(readFileSync(join(p.r27, f), 'utf-8')).data);

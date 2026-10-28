@@ -12,5 +12,8 @@
     "gen:me": "node --disable-warning=ExperimentalWarning scripts/gen-me-data.ts",
     "me": "npm run gen:me && node scripts/serve.mjs --me",
     "shots": "node scripts/screenshot.mjs"
+  },
+  "engines": {
+    "node": ">=22.18"
   }
 }

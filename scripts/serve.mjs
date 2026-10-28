@@ -3,6 +3,8 @@ import { readFile, stat } from 'node:fs/promises';
 import { join, normalize, extname, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { existsSync, readFileSync } from 'node:fs';
+import { execFile } from 'node:child_process';
 import { mePaths, loadLive, handleApi } from '../src/me/live.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', 'apps', 'web');
@@ -56,4 +58,28 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const me = process.argv.includes('--me');
   await start(me ? 5179 : 5178, '127.0.0.1', { me });
   console.log(me ? 'job-os 我的求职台: http://127.0.0.1:5179/' : 'job-os demo: http://127.0.0.1:5178/');
+  if (me) autoSync();
+}
+
+// 个人模式：求职台开着时自己负责每日同步（launchd 后台进程读不了“文稿”目录）。
+// 启动时和之后每 30 分钟看一次，上次成功同步超过 12 小时就跑；同步脚本只在本机，不在仓库里。
+function autoSync() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const script = join(here, 'sync-feishu.py'), log = join(here, '..', '..', 'data-private', '同步日志.jsonl');
+  if (!existsSync(script)) return;
+  let running = false;
+  const lastOk = () => {
+    try { const ok = readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l)).filter((e) => e.ok).pop(); return ok ? Date.parse(ok.at) : 0; } catch { return 0; }
+  };
+  const tick = () => {
+    if (running || Date.now() - lastOk() < 12 * 3600e3) return;
+    running = true;
+    console.log('开始同步岗位数据…');
+    execFile('python3', [script], { timeout: 15 * 60e3 }, (err, out, errOut) => {
+      running = false;
+      console.log(err ? `同步失败：${(errOut || err.message).trim().split('\n').pop()}` : out.trim());
+    });
+  };
+  tick();
+  setInterval(tick, 30 * 60e3).unref();
 }

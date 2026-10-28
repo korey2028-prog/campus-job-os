@@ -1,0 +1,16 @@
+{
+  "name": "job-os",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/*.test.ts\"",
+    "cli": "node src/cli.ts",
+    "build:web": "node --disable-warning=ExperimentalWarning scripts/build-web.ts",
+    "gen:demo": "node --disable-warning=ExperimentalWarning scripts/gen-demo-data.ts",
+    "web": "node scripts/serve.mjs",
+    "gen:me": "node --disable-warning=ExperimentalWarning scripts/gen-me-data.ts",
+    "me": "npm run gen:me && node scripts/serve.mjs --me",
+    "shots": "node scripts/screenshot.mjs"
+  }
+}

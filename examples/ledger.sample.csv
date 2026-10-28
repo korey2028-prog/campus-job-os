@@ -1,0 +1,7 @@
+local_id,company,role,official_url,jd_checked_at,hard_conditions,stage,resume_path,submission_evidence,last_event_at,next_action,next_action_date,notes
+DEMO-001,示例科技（北京）有限公司,产品经理,https://example.com/jobs/1,2026-10-01,"27届, 本科及以上",未核验,,,2026-10-01,核对JD,2026-10-20,"备注含逗号, 与""引号""
+和换行"
+DEMO-002,样例集团,运营实习生,https://example.com/jobs/2,,,已投递（用户确认）,,截图,2026-10-10,等待通知,2026-10-30,
+DEMO-003,虚构网络股份有限公司,数据分析,,,,本人决定不投,,,,,,
+DEMO-004,演示公司,策划,,,,初面已完成，结果未知,,,2026-10-20,跟进,2026-11-02,
+DEMO-005,测试有限公司,设计,,,,神秘阶段,,,,,,

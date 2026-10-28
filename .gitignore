@@ -1,0 +1,8 @@
+*.db
+/data/
+node_modules/
+private/
+# 个人工具：本人求职台的规格、第三方数据同步脚本和定时配置，只留本机
+SPEC_我的求职台.md
+scripts/sync-feishu.py
+scripts/com.korey.jobos-feishu-sync.plist

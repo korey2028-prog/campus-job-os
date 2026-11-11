@@ -2,9 +2,9 @@
                                                    
 
 const RULES                        = [
-  [/本人决定不投|资格不符|暂不推进/, 'stopped'],
+  [/本人决定不投|资格不符|暂不推进|未通过|被拒|淘汰/, 'stopped'],
   [/来源关闭/, 'closed_source'],
-  [/面/, 'interviewing'],
+  [/面|测评|(?<!免)笔试/, 'interviewing'],
   [/已投递/, 'submitted'],
   [/现场简历已收|收纸质简历/, 'offline_received'],
   [/草稿/, 'drafted'],

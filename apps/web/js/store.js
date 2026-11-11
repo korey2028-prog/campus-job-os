@@ -183,6 +183,8 @@ export function sortJobs(list, mode) {
 // ---------- 筛选 ----------
 // 即将截止统一 7 天（和排序里的 URGENT_DAYS 一致）
 export const SOON_DAYS = 7;
+// 最近新增：第一次同步到（个人模式）或表里更新日期在今天、昨天
+export const isNew = (v) => { const d = v.firstSeen || v.updatedAt; if (!d) return false; const n = diffDays(S.today, d); return n >= 0 && n <= 1; };
 export const TAGS = [
   { id: 'can', label: '我能投', f: (v) => v.elig.verdict === '可投' },
   { id: 'free', label: '免笔试', f: (v) => v.writtenTest === '免' },
@@ -207,6 +209,7 @@ export const EASY_TAGS = [
   { id: 'open', label: '不限专业', f: (v) => v.majors.includes('不限专业') },
   { id: 'lowdeg', label: '学历不限 / 大专可投', f: (v) => !v.minDegree || v.minDegree === '大专' },
   { id: 'soon7', label: '7 天内截止', f: (v) => v.daysLeft != null && v.daysLeft >= 0 && v.daysLeft <= SOON_DAYS },
+  { id: 'new', label: '最近新增', f: isNew },
   { id: 'dlunk', label: '截止日不明', f: (v) => v.deadline.kind === 'unknown' },
   { id: 'famous', label: '知名企业', f: (v) => v.tier },
   { id: 'intern', label: '实习', f: (v) => v.internship },

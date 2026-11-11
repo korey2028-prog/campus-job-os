@@ -1,4 +1,4 @@
-import { S, isMe, displayTitle, positions, appsAll, colOf, getPos, summary, persist, dlText, moveApp, SOON_DAYS, humanNext } from '../store.js';
+import { S, isMe, displayTitle, positions, appsAll, colOf, getPos, summary, persist, dlText, moveApp, SOON_DAYS, humanNext, isNew } from '../store.js';
 import { esc, icon, act, diffDays, fmtMD, addDays, rerender, toast } from '../util.js';
 import { verdictBadge, dlChip, pageHead, emptyState } from '../components.js';
 
@@ -40,6 +40,10 @@ export default {
     const soonList = positions().filter((v) => !v.expired && !v.risk && v.elig.verdict !== '不可投' && v.daysLeft != null && v.daysLeft >= 0 && v.daysLeft <= SOON_DAYS).sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 12);
     const d7 = positions().filter((v) => v.daysLeft != null && v.daysLeft >= 0 && v.daysLeft <= 7 && !v.expired).length;
     const picks = isMe() ? positions().filter((v) => v.rank?.tier === 'A' && !v.expired && !v.risk && ((v.daysLeft != null && v.daysLeft <= 7) || v.updatedAt === S.today)).sort((a, b) => (a.daysLeft ?? 999) - (b.daysLeft ?? 999)).slice(0, 5) : [];
+    // 最近新增：和方向相关的（推荐 A/B 档）排前面
+    const fresh = positions().filter((v) => isNew(v) && !v.expired && !v.risk && v.elig.verdict !== '不可投');
+    const freshMine = fresh.filter((v) => ['A', 'B'].includes(v.rank?.tier)).sort((a, b) => (a.rank.tier > b.rank.tier ? 1 : -1));
+    const freshShow = (freshMine.length ? freshMine : fresh).slice(0, 5);
     const noDate = apps.filter((a) => colOf(a) !== '结束' && !a.nextActionDate);
     const noDeadline = apps.filter((a) => colOf(a) !== '结束').map((a) => ({ a, v: getPos(a.positionId) })).filter((x) => x.v && x.v.deadline.kind === 'unknown');
     const hello = S.profile.name + '，';
@@ -56,6 +60,7 @@ export default {
       <div class="stat"><dt>投递中</dt><dd class="tnum">${apps.filter((a) => !['结束'].includes(colOf(a))).length}</dd></div>
     </dl>
     ${picks.length ? `<section class="block"><h2 class="h2">为你推荐</h2><div class="list">${picks.map((v) => `<a class="row-link" href="#/jobs/${v.id}"><span><strong>${esc(v.company)} · ${esc(displayTitle(v))}</strong><small>${esc(v.rank.reasons[0])}</small></span>${dlChip(v)}${icon('right', 18)}</a>`).join('')}</div></section>` : ''}
+    ${fresh.length ? `<section class="block"><div class="h-row"><h2 class="h2">最近新增<small class="tnum">${fresh.length} 个${freshMine.length ? `，和你方向相关 ${freshMine.length} 个` : isMe() ? '，没有和你方向相关的' : ''}</small></h2><a class="link" href="#/jobs?tags=new">全部${icon('right', 16)}</a></div><div class="list">${freshShow.map((v) => `<a class="row-link" href="#/jobs/${v.id}"><span><strong>${esc(v.company)} · ${esc(displayTitle(v))}</strong><small>${esc(v.cities.slice(0, 3).join('、'))}</small></span>${dlChip(v)}${icon('right', 18)}</a>`).join('')}</div></section>` : ''}
     <section class="block"><h2 class="h2">今天先做这几件</h2>
       ${acts.length ? `<ul class="actions">${acts.map((a) => `<li class="act-row ${S.done[a.key] ? 'done' : ''}">
         <button class="check ${S.done[a.key] ? 'on' : ''}" data-act="t-done" data-key="${a.key}" aria-pressed="${!!S.done[a.key]}" aria-label="${S.done[a.key] ? '标为未完成' : '标为完成'}">${icon('check', 16)}</button>

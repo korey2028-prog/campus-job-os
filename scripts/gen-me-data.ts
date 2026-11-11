@@ -35,6 +35,11 @@ const idMap: Record<string, number> = existsSync(p.idMap) ? JSON.parse(readFileS
 let nextId = Math.max(99999, ...Object.values(idMap)) + 1;
 for (const v of [...positions, ...archive]) v.id = idMap[v.recordId] ??= nextId++;
 writeAtomic(p.idMap, JSON.stringify(idMap));
+// 首次出现日期：同步里第一次见到这条记录的那天，今天页“新增”用它（表里的更新日期在改动时也会变）
+const seenPath = join(root, 'private', 'first-seen.json');
+const firstSeen: Record<string, string> = existsSync(seenPath) ? JSON.parse(readFileSync(seenPath, 'utf-8')) : {};
+for (const v of [...positions, ...archive]) (v as any).firstSeen = firstSeen[v.recordId] ??= today;
+writeAtomic(seenPath, JSON.stringify(firstSeen));
 const ledger = parseLedger(readFileSync(p.ledger, 'utf-8'));
 const apps = applicationsFromLedger(ledger, positions);
 applyLedgerLinks(apps, positions, readLinks(p));

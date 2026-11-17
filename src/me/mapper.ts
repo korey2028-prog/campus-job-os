@@ -1,9 +1,9 @@
 // 个人模式的映射层：第三方数据包 / 台账 / 事实底稿 → 网页读的数据结构（形状与 demo.json 一致）
-import { parseGradWindow } from '../domain/grad.ts';
 import { parseDeadline, isExpired } from '../domain/deadline.ts';
 import { normalizeCompany } from '../domain/dedupe.ts';
 import { parseCsvRecords } from '../import/csv.ts';
 import { normalizeCities } from './cities.ts';
+export { localDate } from '../domain/local-date.ts';
 
 const OPEN = '[（(【\\[]';
 const CLOSE = '[）)】\\]]';
@@ -50,9 +50,6 @@ const hostOf = (u: string) => { try { return new URL(u).hostname.toLowerCase(); 
 // 源表里混进过 prompt 残留（如“请提供需要判断所属行业的完整企业名称。”），一律当未分类
 export const INDUSTRY_JUNK = /请提供|所属行业|企业名称|完整|需要判断|无法判断|未知|待补充/;
 const industryOf = (s: string | null) => (!s || INDUSTRY_JUNK.test(s) ? '未分类' : /IT|互联网/.test(s) ? '互联网/科技' : s);
-const localDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-export { localDate };
-
 // 飞书多选/文本单元格 → 字符串；链接是 markdown [文字](url)
 const text = (v: unknown): string => (Array.isArray(v) ? String(v[0] ?? '') : v == null ? '' : String(v)).trim();
 export const linkOf = (v: unknown): string => text(v).match(/\]\(([^\s)]+)/)?.[1] ?? '';

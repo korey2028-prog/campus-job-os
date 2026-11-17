@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, copyFileSync, readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { updateRow, addRow, LedgerError, sidecars } from '../src/ledger/writer.ts';
+import { updateRow, addRow, patchRow, LedgerError, sidecars } from '../src/ledger/writer.ts';
 
 const HEAD = 'local_id,company,role,official_url,jd_checked_at,hard_conditions,stage,resume_path,submission_evidence,last_event_at,next_action,next_action_date,notes';
 const SAMPLE = [
@@ -73,4 +73,52 @@ test('没有 JOS 行时从 001 开始', () => {
   const path = join(dir, '岗位台账.csv');
   copyFileSync(new URL('../examples/ledger.sample.csv', import.meta.url), path);
   assert.equal(addRow(path, { company: '某公司', role: 'Y' }, NOW).local_id, 'JOS-001');
+});
+
+test('同一秒的第二次备份带序号，缺字段或空公司不写文件', () => {
+  const { path } = fixture();
+  const orig = readFileSync(path, 'utf-8');
+  const after = { ...state, stage: '已投递（用户确认）' };
+  updateRow(path, 'A-1', state, after, NOW);
+  updateRow(path, 'A-1', after, { ...after, notes: '第二次' }, NOW);
+  const names = readdirSync(sidecars(path).backupDir).sort();
+  assert.deepEqual(names, ['岗位台账_20261028-093015-1.csv', '岗位台账_20261028-093015.csv']);
+
+  const kept = readFileSync(path, 'utf-8');
+  assert.throws(() => updateRow(path, 'A-1', after, { ...after, notes: undefined as unknown as string }, NOW),
+    (e) => e instanceof LedgerError && e.status === 400);
+  assert.throws(() => addRow(path, { company: '  ', role: 'Y' }, NOW), (e) => e instanceof LedgerError && e.status === 400);
+  assert.equal(readFileSync(path, 'utf-8'), kept);
+  assert.deepEqual(readdirSync(sidecars(path).backupDir).sort(), names);
+  assert.notEqual(kept, orig);
+});
+
+test('patchRow：期望不一致则 409，未知列和 local_id 则 400，成功时只改目标列', () => {
+  const { path } = fixture();
+  const orig = readFileSync(path, 'utf-8');
+  patchRow(path, 'A-1', { notes: '只改备注' }, { notes: '备注,含逗号' }, NOW, 'tester');
+  const next = readFileSync(path, 'utf-8');
+  assert.equal(next.slice(next.indexOf('JOS-007')), orig.slice(orig.indexOf('JOS-007')));
+  assert.match(next, /A-1,甲公司,产品实习,https:\/\/a\.example,2026-10-01,,未核验,,,2026-10-28,看公告,2026-10-30,只改备注\r\n/);
+  const log = readFileSync(sidecars(path).logPath, 'utf-8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(log.length, 1);
+  assert.equal(log[0].by, 'tester');
+  assert.deepEqual(log[0].before, { notes: '备注,含逗号' });
+  assert.deepEqual(log[0].after, { notes: '只改备注' });
+
+  const mid = readFileSync(path, 'utf-8');
+  assert.throws(() => patchRow(path, 'A-1', { notes: 'x' }, { notes: '不对' }, NOW), (e) => e instanceof LedgerError && e.status === 409);
+  assert.throws(() => patchRow(path, 'A-1', { not_a_column: 'x' }, {}, NOW), (e) => e instanceof LedgerError && e.status === 400);
+  assert.throws(() => patchRow(path, 'A-1', { local_id: 'ZZ' }, {}, NOW), (e) => e instanceof LedgerError && e.status === 400);
+  assert.equal(readFileSync(path, 'utf-8'), mid);
+  assert.equal(readdirSync(sidecars(path).backupDir).length, 1);
+});
+
+test('缺列的台账直接 400，不产生备份', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'ledger-'));
+  const path = join(dir, '岗位台账.csv');
+  writeFileSync(path, 'local_id,company\r\nA,甲\r\n');
+  assert.throws(() => updateRow(path, 'A', state, state, NOW), (e) => e instanceof LedgerError && e.status === 400 && /缺少列/.test(e.message));
+  assert.equal(existsSync(sidecars(path).backupDir), false);
+  assert.equal(readFileSync(path, 'utf-8'), 'local_id,company\r\nA,甲\r\n');
 });

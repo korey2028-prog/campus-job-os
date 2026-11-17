@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"test/*.test.ts\"",
+    "typecheck": "tsc --noEmit",
+    "check:boundaries": "node scripts/check-boundaries.ts",
+    "check": "npm run check:boundaries && npm run typecheck && npm test",
     "cli": "node src/cli.ts",
     "build:web": "node --disable-warning=ExperimentalWarning scripts/build-web.ts",
     "gen:demo": "node --disable-warning=ExperimentalWarning scripts/gen-demo-data.ts",
@@ -15,5 +18,9 @@
   },
   "engines": {
     "node": ">=22.18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.3",
+    "typescript": "^5.9.3"
   }
 }

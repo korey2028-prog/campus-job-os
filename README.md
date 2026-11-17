@@ -43,6 +43,30 @@ node src/cli.ts list
 
 所有命令可加 `--db <path>`，默认 `~/.job-os/job-os.db`。测试：`npm test`。
 
+## 提交前检查
+
+改完代码先跑：
+
+```bash
+npm run check
+```
+
+它按架构、静态检查、运行验证的顺序做三件事，任何一件失败都不算做完：
+
+- `npm run check:boundaries`：依赖方向，以及已跟踪文件里不能有 `*.db`、根目录 `data/`、`private/`、`data-private/`、真实简历或真实台账。
+- `npm run typecheck`：`tsc --noEmit`。`tsconfig.json` 打开 `strict`，并用 `erasableSyntaxOnly`、`verbatimModuleSyntax`、`allowImportingTsExtensions` 对齐 Node 直接运行 TypeScript 时的类型擦除。
+- `npm test`：领域不变量、台账写回、导入、映射，以及 CLI 和 `npm run build:web` 的冒烟。
+
+分层由 `scripts/check-boundaries.ts` 执行：
+
+- `src/domain` 只引用自己，不读文件，不访问数据库。
+- `src/store` 可引用 `src/domain`。
+- `src/import` 可引用 `src/domain` 和 `src/store`。`src/import/csv.ts` 是纯解析器。
+- `src/ledger` 可引用 `src/domain` 和 `src/import/csv.ts`，不能引用 `src/me`。
+- `src/me` 可引用 `src/domain`、`src/import/csv.ts` 和 `src/ledger`。
+- `src/cli.ts` 和 `scripts/` 在最外层，用来组合上面这些模块。`apps/web` 只引用自己；改了 `src/domain` 之后运行 `npm run build:web`，生成 `apps/web/lib`。
+- 运行时不安装 npm 包。`scripts/screenshot.mjs` 里的 `playwright` 是唯一允许的本机可选引用，不能写进 `dependencies`。
+
 ## 数据分离规则
 
 代码仓库只放虚构示例（`examples/`）。真实台账、JD、简历留在仓库之外；导入器对源文件只读，数据库默认在 `~/.job-os/`，`*.db` 与 `data/` 已被忽略。

@@ -54,3 +54,24 @@ test('普通产品岗只算方向命中，不是强命中', () => {
   assert.equal(r({ title: '产品经理实习生' }).tier, 'B');
   assert.equal(r({ title: '大模型产品运营' }).tier, 'A');
 });
+
+test('排序不变量：加分、城市前缀、方向缺失和不可投', () => {
+  const urgent = r({ cities: ['深圳'], deadline: { kind: 'date', date: '2026-11-02' } });
+  assert.equal(urgent.tier, 'A');
+  assert.equal(urgent.reasons.some((x) => x.includes('紧迫')), false);
+
+  const trusted = r({ cities: ['深圳'], confidence: '高' });
+  assert.equal(trusted.tier, 'A');
+  assert.match(trusted.reasons.join(''), /来源可信度高/);
+  assert.equal(r({ cities: ['深圳'], ownership: '央国企' }).tier, 'A');
+  assert.equal(r({ cities: ['深圳'], deadline: { kind: 'date', date: '2026-10-01' } }).tier, 'B');
+  assert.equal(r({ cities: ['杭州'], ownership: '外企', industry: '互联网/科技', confidence: '高' }).tier, 'B');
+  assert.equal(r({ cities: ['北京市'] }).tier, 'A');
+  assert.equal(rankPosition(base, { cities: ['北京'] }, TODAY).tier, 'C');
+  assert.equal(r({ title: 'x', roles: ['AI产品经理' + '甲'.repeat(30)] }).tier, 'C');
+  assert.equal(r({ title: 'x', roles: ['AI产品类与运营类及设计类合集'] }).tier, 'C');
+  assert.deepEqual(r({ verdict: '不可投', industry: '互联网/科技', ownership: '外企' }), { tier: null, reasons: [], matched: [] });
+  const matched = r({ title: '多岗位', roles: ['AI产品经理', '大模型产品', 'AIGC产品', 'LLM产品运营'] });
+  assert.equal(matched.tier, 'A');
+  assert.equal(matched.matched.length, 3);
+});

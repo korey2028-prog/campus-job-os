@@ -6,6 +6,7 @@ import { checkEligibility } from '../src/domain/eligibility.ts';
 import { normalizeCompany, positionKey } from '../src/domain/dedupe.ts';
 import { mapStage } from '../src/domain/stage.ts';
 import { confidence } from '../src/domain/confidence.ts';
+import { localDate } from '../src/domain/local-date.ts';
 import { openDb, upsertPosition, listPositions, getDetail } from '../src/store/db.ts';
 import type { Position } from '../src/domain/types.ts';
 
@@ -156,4 +157,44 @@ test('confidence rules', () => {
   // verified drops 未实测
   const ver = good.map((g) => ({ ...g, verified_at: '2026-10-25T00:00:00Z' }));
   assert.equal(confidence({ sourceUrls: ['https://x.gov.cn'], provenance: ver, deadline: dl, gradWindow: gw, now }).label, '高');
+});
+
+test('localDate is the local calendar day', () => {
+  assert.equal(localDate(new Date(2026, 0, 2, 3, 4, 5)), '2026-01-02');
+  assert.equal(localDate(new Date(2026, 9, 28, 9, 30, 15)), '2026-10-28');
+});
+
+test('eligibility boundaries stay inside the matrix', () => {
+  const today = '2026-10-27';
+  const at = (gradDate: string) => checkEligibility(base, { ...me, gradDate }, today).verdict;
+  assert.equal(at('2026-09'), '可投');
+  assert.equal(at('2027-08'), '可投');
+  assert.equal(at('2026-08'), '不可投');
+  assert.equal(at('2027-09'), '不可投');
+
+  for (const [degree, verdict] of [['大专', '不可投'], ['本科', '可投'], ['硕士', '可投'], ['博士', '可投']] as const)
+    assert.equal(checkEligibility(base, { ...me, degree }, today).verdict, verdict, degree);
+  assert.equal(checkEligibility({ ...base, minDegree: '硕士' }, { ...me, degree: '本科' }, today).verdict, '不可投');
+  assert.equal(checkEligibility({ ...base, minDegree: '硕士' }, { ...me, degree: '博士' }, today).verdict, '可投');
+
+  const { minDegree: _drop, ...noMin } = base;
+  assert.equal(checkEligibility(noMin, me, today).verdict, '可投');
+  assert.ok(checkEligibility(noMin, me, today).reasons.some((r) => r.includes('未限制学历')));
+  assert.equal(checkEligibility({ ...noMin, downwardCompatible: false, degrees: [] }, me, today).verdict, '可投');
+  assert.equal(checkEligibility({ ...base, downwardCompatible: false, degrees: [] }, { ...me, degree: '本科' }, today).verdict, '可投');
+  assert.equal(checkEligibility({ ...base, downwardCompatible: false, degrees: [] }, { ...me, degree: '博士' }, today).verdict, '不可投');
+
+  assert.equal(checkEligibility({ ...base, majors: ['计算机科学与技术'] }, { ...me, major: '计算机' }, today).verdict, '可投');
+  assert.equal(checkEligibility({ ...base, majors: ['法学', '不限专业'] }, me, today).verdict, '可投');
+  const mismatch = checkEligibility({ ...base, majors: ['法学'] }, me, today);
+  assert.equal(mismatch.verdict, '待确认');
+  assert.equal(checkEligibility({ ...base, majors: ['计算机'] }, { ...me, major: '' }, today).verdict, '待确认');
+  assert.equal(checkEligibility({ ...base, deadline: { kind: 'date', date: '2000-01-01' } }, me).verdict, '可投');
+
+  const tight = checkEligibility({
+    ...base, gradWindow: null, majors: ['法学'], minDegree: '博士', deadline: { kind: 'date', date: '2000-01-01' },
+  }, me, today);
+  assert.equal(tight.verdict, '不可投');
+  assert.equal(tight.reasons.length, 4);
+  assert.equal(checkEligibility(base, me, today).reasons.length, 4);
 });

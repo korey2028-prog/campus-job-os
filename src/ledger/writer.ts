@@ -2,7 +2,7 @@
 import { readFileSync, writeFileSync, renameSync, mkdirSync, existsSync, appendFileSync, openSync, fsyncSync, closeSync } from 'node:fs';
 import { basename, dirname, extname, join } from 'node:path';
 import { parseCsv } from '../import/csv.ts';
-import { localDate } from '../me/mapper.ts';
+import { localDate } from '../domain/local-date.ts';
 
 export const EDITABLE = ['stage', 'next_action', 'next_action_date', 'notes'] as const;
 export type Editable = Record<(typeof EDITABLE)[number], string>;
